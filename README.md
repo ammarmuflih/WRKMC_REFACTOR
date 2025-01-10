@@ -1,3 +1,7 @@
+
+Project Structure:
+
+>>>>>>> ee4ea89 (first commit)
 your_project/
 │
 ├── app/
@@ -36,3 +40,6 @@ your_project/
 ├── run.py                    # Application entry point
 └── README.md                 # Documentation
 
+HEAD
+# WRKMC_REFACTOR
+4d897c5 (first commit)
