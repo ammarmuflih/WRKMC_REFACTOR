@@ -1,4 +1,4 @@
-Project Structure:
+# Project Structure
 
 your_project/
 │
@@ -38,4 +38,3 @@ your_project/
 ├── run.py                    # Application entry point
 └── README.md                 # Documentation
 
-# WRKMC_REFACTOR
