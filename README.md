@@ -1,5 +1,3 @@
-# Project Structure
-
 your_project/
 │
 ├── app/
