@@ -14,7 +14,7 @@ def create_app():
         initializer.initialize_env()
         retriever = initializer.initialize_database()
         rag_chain = initializer.chain_factory
-        llm_service = ragService(retriever=retriever, rag_chain=rag_chain)
+        llm_service = ragService(retriever=retriever, rag_chain=rag_chain, url=loc["url"])
 
         # initializer.load_water_level_data(config=config, url=loc["url"])
         initializer_store.initializer_dict[loc["name"]] = {

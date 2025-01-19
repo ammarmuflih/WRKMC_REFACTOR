@@ -4,9 +4,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, List
 
+from langchain_openai import ChatOpenAI
+from langchain_openai import OpenAIEmbeddings
+
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.prompts import PromptTemplate
+import random
 # from llm_zoo import OpenRouterLLM
 import dotenv
 import os
@@ -39,10 +43,10 @@ class WaterLevelConfig:
     """Water level data configuration."""
     kedungputri_url: str = "https://sipasi.online/data/last/di/49"
     sapon_url: str = "https://sipasi.online/data/last/di/47"
-    level_column: str = 'C13'
-    level_column_rename: str = 'tinggi muka air'
-    userkey_column: str = 'user_key'
-    userkey_rename: str = 'titik pengamatan'
+    level_column: str = "C13"
+    level_column_rename: str = "tinggi muka air"
+    userkey_column: str = "user_key"
+    userkey_rename: str = "titik pengamatan"
 
 @dataclass
 class LLMConfig:
@@ -209,15 +213,39 @@ class promptTemplate:
         teks: {message}'''
     )
 
+    MULTI_QUERY_GENERATION_PROMP = PromptTemplate(
+            input_variables=["query"],
+            template="""Anda adalah asisten model bahasa AI. Tugas Anda adalah 
+            menghasilkan 3 versi berbeda dari pertanyaan pengguna yang diberikan 
+            untuk mengambil dokumen yang relevan dari database vektor. 
+            Dengan menghasilkan berbagai perspektif dari pertanyaan pengguna, 
+            tujuan Anda adalah membantu pengguna mengatasi beberapa keterbatasan 
+            dalam pencarian kemiripan berbasis jarak. Berikan pertanyaan alternatif ini 
+            dengan dipisahkan oleh baris baru. Pertanyaan asli: {question}"""
+        )
+
+# @dataclass
+# class responses:
+#     identity_question_response = [
+#         "Saya adalah asisten virtual WRKMC, sebuah sistem kecerdasan buatan yang dirancang untuk membantu Anda dengan berbagai pertanyaan dan tugas.",
+#         "Perkenalkan, saya asisten AI WRKMC. Saya di sini untuk membantu Anda dengan informasi dan tugas-tugas yang Anda perlukan.",
+#         "Halo! Saya adalah AI asisten dari WRKMC. Saya siap membantu Anda dengan berbagai pertanyaan dan tugas sesuai kemampuan saya.",
+#         "Saya adalah sistem AI yang dikembangkan oleh WRKMC untuk membantu pengguna seperti Anda. Senang bertemu dengan Anda!",
+#         "Nama saya adalah asisten WRKMC, sebuah AI yang dirancang untuk memberikan bantuan dan informasi kepada Anda."
+#     ]
+
 @dataclass
-class responses:
-    identity_question_response = [
+class Responses:
+    identity_question_response_list = [
         "Saya adalah asisten virtual WRKMC, sebuah sistem kecerdasan buatan yang dirancang untuk membantu Anda dengan berbagai pertanyaan dan tugas.",
         "Perkenalkan, saya asisten AI WRKMC. Saya di sini untuk membantu Anda dengan informasi dan tugas-tugas yang Anda perlukan.",
         "Halo! Saya adalah AI asisten dari WRKMC. Saya siap membantu Anda dengan berbagai pertanyaan dan tugas sesuai kemampuan saya.",
         "Saya adalah sistem AI yang dikembangkan oleh WRKMC untuk membantu pengguna seperti Anda. Senang bertemu dengan Anda!",
         "Nama saya adalah asisten WRKMC, sebuah AI yang dirancang untuk memberikan bantuan dan informasi kepada Anda."
     ]
+    
+    def random_identity_question_response(self) -> str:
+        return random.choice(self.identity_question_response_list)
 
 class Config:
     """Main configuration class."""
@@ -228,7 +256,7 @@ class Config:
         self.water_level = WaterLevelConfig()
         self.documenProcessing = DocumentProcessingConfig()
         self.promptTemplate = promptTemplate()
-        self.response = responses()
+        self.responses = Responses()
         
         # Embedding models
         self._init_embedding_models()
@@ -243,6 +271,10 @@ class Config:
         self.embedding_model_2 = HuggingFaceEmbeddings(
             model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
         )
+        self.embedding_model_3 = OpenAIEmbeddings(
+            model="text-embedding-3-small"
+        )
+
         self.EMBEDDING_MODEL = self.embedding_model_2
 
     def _init_llm_models(self) -> None:
@@ -255,15 +287,15 @@ class Config:
                     temperature=0.5
                 )
             ),
-            # 'model_2': LLMConfig(
-            #     name='google/gemini-pro-1.5-exp',
-            #     temperature=0.0,
-            #     model=OpenRouterLLM(
-            #         api_key=os.getenv("OPENROUTER_APIKEY"),
-            #         model_name='google/gemini-pro-1.5-exp',
-            #         temperature=0.0
-            #     )
-            # ),
+            'model_2': LLMConfig(
+                name='gpt-4o',
+                temperature=0.5,
+                model=ChatOpenAI(
+                    # api_key=os.getenv("OPENAI_API_KEY"),
+                    model_name='gpt-4o',
+                    temperature=0.5
+                )
+            ),
             'model_3': LLMConfig(
                 name='gemini-1.5-flash',
                 temperature=0.0,

@@ -12,6 +12,8 @@ def chat():
     user_prompt = request.json.get('message') # 'user_prompt'
     user_location = request.json.get('location') # 'user_location'
 
+    print("OBJECT: \n",initializer_store.initializer_dict)
+
     if user_location == 'sapon':
         response = initializer_store.initializer_dict[user_location]['llm_service'].rag(user_id, user_prompt)
         print("RESPONSE: \n")

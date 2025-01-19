@@ -173,7 +173,7 @@ class Initializer:
     """Main initializer class for the RAG system."""
     
     def __init__(self, folder_path: str):
-        self.embedding_model = config.embedding_model_2
+        self.embedding_model = config.embedding_model_3
         self.llm_model = config.llm_configs['model_1'].model
         self.folder_path = Path(folder_path)
         self.doc_config = DocumentProcessingConfig()
@@ -189,7 +189,8 @@ class Initializer:
         env_vars = {
             "GOOGLE_API_KEY": os.getenv("GOOGLE_API_KEY"),
             "LANGCHAIN_API_KEY": os.getenv("LANGCHAIN_API_KEY"),
-            "LANGCHAIN_TRACING_V2": os.getenv("LANGCHAIN_TRACING_V2", "true")
+            "LANGCHAIN_TRACING_V2": os.getenv("LANGCHAIN_TRACING_V2", "true"),
+            "OPENAI_API_KEY": os.getenv("OPENAI_APIKEY")
         }
         
         for key, value in env_vars.items():

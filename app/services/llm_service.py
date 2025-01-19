@@ -10,10 +10,11 @@ import random
 # }
 
 class ragService:
-    def __init__(self, retriever, rag_chain):
+    def __init__(self, retriever, rag_chain, url):
         self.retriever = retriever
         self.rag_chain = rag_chain
-        self.helper = helper(llm=config.llm_configs['model_3'].model)
+        self.url = url
+        self.helper = helper(llm=config.llm_configs['model_2'].model)
         chainZoo = self.helper.getChainZoo()  # Ensure chainZoo is an instance
 
         self.is_chain = {
@@ -43,36 +44,38 @@ class ragService:
         
         return chain_result, chain_response
 
-
     def rag(self, user_id:str,  query:str):
         chat_history = self.helper.get_user_chat_history(user_id=user_id)
         chat_history.add_user_message(query)
         chain_result, chain_response = self.preprocessQuery(query)
-        
         if chain_result["is_greeting"]:
             response = self.helper.greeting_response(greeting=query)
             print(response, type)
             return self.response_template(query=query, response=response)
         
         if chain_result["is_water_level_question"]:
-            water_data = self.helper.load_water_level_data(url="dasd")
+            water_data = self.helper.load_water_level_data(self.url)
             titik_pengamatan, titik_pengamatan_processed, titik_pengamatan_dict = self.helper.get_titik_pengamatan(water_data)
-            location = self.helper.get_titik_pengamatan(titik_pengamatan_processed)
+            location = self.helper.is_any_location_in_query(query, titik_pengamatan_processed)
             if location:
-                response = self.helper.water_level_question_response(location=location, data=water_data, titik_pengamatan_dict=titik_pengamatan_dict)
+                response = {'text': self.helper.water_level_question_response(location=location, data=water_data, titik_pengamatan_dict=titik_pengamatan_dict)}
                 return self.response_template(query=query, response=response)
             else:
                 titik_pengamatan_string = ', '.join(titik_pengamatan)
-                response = f"Lokasi tidak ditemukan, Daftar Lokasi: {titik_pengamatan_string}"
+                response = {'text': f"Lokasi tidak ditemukan, Daftar Lokasi: {titik_pengamatan_string}"}
                 return self.response_template(query=query, response=response)
         
         if chain_result["is_identity_question"]:
-            response = self.helper.identity_question_response()
+            response = {'text': self.helper.identity_question_response()}
             print(response, type)
             return self.response_template(query=query, response=response)
         
+        retrieved_docs = self.helper.search_with_similarity(retriever=self.retriever, query=query)
+        print("RETRIEVED_DOCS: \n", retrieved_docs)
+
         print("Chat Service")
-        return self.response_template(query=query, response="Chat Service")
+        response = {'text': "Chat Service"}
+        return self.response_template(query=query, response=response)
     
     def response_template(self, query:str, response:str):
         return {
