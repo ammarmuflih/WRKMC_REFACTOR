@@ -1,10 +1,13 @@
-from app import create_app
+from app import create_app, precheck
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
 
-app = create_app()
+app = precheck()
 
-if __name__ == '__main__':
-    app.run()
+if app:  # Pastikan app tidak None sebelum dijalankan
+    if __name__ == '__main__':
+        app.run()
+else:
+    print("Application failed to start due to missing folders.")

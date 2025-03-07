@@ -29,24 +29,25 @@ class DocumentProcessingConfig:
 @dataclass
 class PathConfig:
     """Document paths configuration."""
-    sapon: Path = Path('/home/ammar/WRKMC/WRKMCLLM_NEW/public_sapon')
-    kedungputri: Path = Path('/home/ammar/WRKMC/WRKMCLLM_NEW/public_kedungputri')
-
-@dataclass
-class SplitterConfig:
-    """Text splitter configuration."""
-    chunk_overlap: int = 200
-    chunk_size: int = 1000
+    public_folder: Path = Path('/home/ammar/WRKMC/WRKMCLLM_REFACTOR/public/')
+    public_location_folder: Path = Path('/home/ammar/WRKMC/WRKMCLLM_REFACTOR/public/location/')
 
 @dataclass
 class WaterLevelConfig:
     """Water level data configuration."""
     kedungputri_url: str = "https://sipasi.online/data/last/di/49"
     sapon_url: str = "https://sipasi.online/data/last/di/47"
+
     level_column: str = "C13"
     level_column_rename: str = "tinggi muka air"
     userkey_column: str = "user_key"
     userkey_rename: str = "titik pengamatan"
+
+@dataclass
+class SplitterConfig:
+    """Text splitter configuration."""
+    chunk_overlap: int = 200
+    chunk_size: int = 1000
 
 @dataclass
 class LLMConfig:
@@ -201,13 +202,27 @@ class promptTemplate:
         yang menanyakan ketinggian muka air pada suatu saluran irigasi. 
         Jawab 'True' jika pesan tersebut adalah pertanyaan yang menanyakan 
         ketinggian muka air pada saluran irigasi (baik menggunakan tanda tanya maupun tidak), dan 'False' jika bukan.
-        
+
+        contoh pertanyaan:
+        - berapakah ketinggian muka air pada (lokasi)?
+        - Berapa tinggi permukaan air di (lokasi) saat ini?
+        - Bagaimana status muka air di (lokasi) sekarang?
+        - Apakah muka air di (lokasi) mengalami kenaikan atau penurunan?
+        - Berapa level ketinggian air di (lokasi) hari ini?
+        - Bagaimana perkembangan ketinggian air di (lokasi) dalam 24 jam terakhir?
+        - Berapa ketinggian air sungai di (lokasi) saat ini?
+        - Apakah ada perubahan signifikan pada tinggi muka air di (lokasi)?
+        - Dapatkah Anda memberi tahu saya level air terbaru di (lokasi)?
+        - Bagaimana kondisi tinggi air di (lokasi) dibandingkan dengan normalnya?
+        - Berapa kenaikan atau penurunan muka air di (lokasi) dalam seminggu terakhir?
+        - dan lain-lain
+
         Pesan asli: {message}'''
     )
 
     summarize_prompt = PromptTemplate(
         input_variables=["message"],
-        template='''Tugas buatlah ringkasan dari teks yang diberikan.
+        template='''Tugas anda buatlah ringkasan dari teks yang diberikan.
         langsung tulis ringkasan saja, tanpa tambahan kalimat apapun,
         abaikan jika ada bagian dari teks yang menurutmu kurang atau tidak relevan.
         teks: {message}'''
@@ -268,48 +283,50 @@ class Config:
         self.embedding_model_1 = GoogleGenerativeAIEmbeddings(
             model="models/embedding-001"
         )
+        
         self.embedding_model_2 = HuggingFaceEmbeddings(
             model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
         )
-        self.embedding_model_3 = OpenAIEmbeddings(
-            model="text-embedding-3-small"
-        )
 
-        self.EMBEDDING_MODEL = self.embedding_model_2
+        self.embedding_model_3 = OpenAIEmbeddings()
+
+        self.EMBEDDING_MODEL = self.embedding_model_3
 
     def _init_llm_models(self) -> None:
         self.llm_configs = {
             'model_1': LLMConfig(
-                name='gemini-1.5-flash',
-                temperature=0.5,
-                model=ChatGoogleGenerativeAI(
-                    model='gemini-1.5-flash',
-                    temperature=0.5
-                )
-            ),
-            'model_2': LLMConfig(
-                name='gpt-4o',
-                temperature=0.5,
-                model=ChatOpenAI(
-                    # api_key=os.getenv("OPENAI_API_KEY"),
-                    model_name='gpt-4o',
-                    temperature=0.5
-                )
-            ),
-            'model_3': LLMConfig(
                 name='gemini-1.5-flash',
                 temperature=0.0,
                 model=ChatGoogleGenerativeAI(
                     model='gemini-1.5-flash',
                     temperature=0.0
                 )
-            )
+            ),
+            'model_2': LLMConfig(
+                name='gpt-4o',
+                temperature=0.7,
+                model=ChatOpenAI(
+                    model_name='gpt-4o',
+                    temperature=0.7
+                )
+            ),
         }
 
     def location_config(self) -> None:
+        location_data = [
+            {"name": "sapon", "url": self.water_level.sapon_url},
+            {"name": "kedungputri", "url": self.water_level.kedungputri_url},
+            # {"name": "bekasi", "url": self.water_level.kedungputri_url}
+        ]
+
         self.location = [
-            {"name": "sapon", "path": self.paths.sapon, "url": self.water_level.sapon_url},
-            {"name": "kedungputri", "path": self.paths.kedungputri, "url": self.water_level.kedungputri_url}
+            {
+                "name": loc["name"],
+                "path": os.path.join(self.paths.public_location_folder, loc["name"]),
+                "url": loc["url"],
+            }
+            
+            for loc in location_data
         ]
 
         return self.location

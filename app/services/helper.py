@@ -10,7 +10,6 @@ import random
 from app.config import config
 from typing import List, Dict
 
-
 class helper:
 
     def __init__(self, llm):
@@ -90,90 +89,13 @@ class helper:
         chainZoo = self.chainZoo
         return chainZoo
     
-    def search_with_similarity(self, retriever, query: str) -> List[Dict]:
-        """
-        Fungsi untuk melakukan pencarian dengan FAISS dan menyertakan similarity score.
+    def summarize(self, text):
+        summarize_chain = self.chainZoo.summarize_chain()
+        print("INPUT TEXT: ", text)
+        summarized_text = summarize_chain.invoke({"message": text})
+        return summarized_text
+
         
-        Args:
-            retriever: Vector store retriever (FAISS)
-            query: Query string untuk pencarian
-            
-        Returns:
-            List of dictionaries containing content and similarity scores
-        """
-
-        print(f"mencari: {query}")
-
-        retrieved_docs = retriever.similarity_search_with_score(query)
-
-        # Format hasil dengan menampilkan skor
-        results_with_scores = []
-        for doc in retrieved_docs:
-            content = doc.page_content  # Isi dokumen
-            score = doc.metadata.get("score", "N/A")  # Ambil skor dari metadata
-            results_with_scores.append({"content": content, "score": score})
-
-        # Tampilkan hasil dengan skor
-        for i, result in enumerate(results_with_scores):
-            print(f"Result {i+1}:")
-            print(f"Content: {result['content']}")
-            print(f"Score: {result['score']}")
-            print("-" * 50)
-
-        return retrieved_docs
-
-    # def search_with_similarity(self, retriever, query: str) -> List[Dict]:
-    #     """
-    #     Fungsi untuk melakukan pencarian dengan FAISS dan menyertakan similarity score.
-        
-    #     Args:
-    #         retriever: Vector store retriever (FAISS)
-    #         query: Query string untuk pencarian
-            
-    #     Returns:
-    #         List of dictionaries containing content and similarity scores
-    #     """
-
-    #     print(f"mencari: {query}")
-
-    #     # Buat prompt template
-    #     multi_query_prompt = PromptTemplate(
-    #         input_variables=["question"],
-    #         template="""Anda adalah asisten AI. Buat 3 versi berbeda dari pertanyaan berikut untuk meningkatkan pencarian dokumen berbasis vektor:
-    #         Pertanyaan asli: {question}"""
-    #     )
-
-    #     # Inisialisasi LLM dan LLMChain
-    #     llm = config.llm_configs["model_3"].model
-    #     llm_chain = LLMChain(llm=llm, prompt=multi_query_prompt)
-
-    #     # Inisialisasi MultiQueryRetrie3er
-    #     multi_query_retriever = MultiQueryRetriever(
-    #         retriever=retriever,
-    #         llm_chain=llm_chain,  # Masukkan llm_chain
-    #         verbose=True,
-    #         num_queries=3,
-    #     )
-
-    #     # Lakukan pencarian
-    #     retrieved_docs = multi_query_retriever.get_relevant_documents(query)
-
-    #     # Format hasil dengan menampilkan skor
-    #     results_with_scores = []
-    #     for doc in retrieved_docs:
-    #         content = doc.page_content  # Isi dokumen
-    #         score = doc.metadata.get("score", "N/A")  # Ambil skor dari metadata
-    #         results_with_scores.append({"content": content, "score": score})
-
-    #     # Tampilkan hasil dengan skor
-    #     for i, result in enumerate(results_with_scores):
-    #         print(f"Result {i+1}:")
-    #         print(f"Content: {result['content']}")
-    #         print(f"Score: {result['score']}")
-    #         print("-" * 50)
-
-    #     return results_with_scores
-
 
 class chainZoo:
     ''' 
@@ -218,22 +140,3 @@ class chainZoo:
         prompt = config.promptTemplate.summarize_prompt
         question_answer_chain =  LLMChain(llm=llm, prompt=prompt)
         return question_answer_chain
-
-
-# # Drop unnecessary columns
-# columns_to_drop = ['no.'] + [f'C{i}' for i in range(15) if i != 13] + ['ip']
-# df = df.drop(columns=columns_to_drop)
-
-# # Rename columns
-# df = df.rename(columns={
-#     config.water_level.level_column: config.water_level.level_column_rename,
-#     config.water_level.userkey_column: config.water_level.userkey_rename
-# })
-
-# # Clean user key data
-# df[config.water_level.userkey_rename] = (df[config.water_level.userkey_rename]
-#     .str.replace(r'\b(AWLR|AWLMS|AWS)\b', '', regex=True)
-#     .str.strip())
-
-# print(df.reset_index(drop=True), type)
-# return df.reset_index(drop=True)

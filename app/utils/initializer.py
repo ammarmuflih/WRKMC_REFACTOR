@@ -18,7 +18,42 @@ from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader
 from langchain_community.vectorstores import FAISS
 from langchain.retrievers.multi_query import MultiQueryRetriever
 from langchain_experimental.text_splitter import SemanticChunker
+from langchain.retrievers.multi_vector import MultiVectorRetriever
+from langchain_core.callbacks import CallbackManagerForRetrieverRun
+from langchain.schema import Document
+from collections import defaultdict
+from langchain.storage import InMemoryByteStore
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from app.config import config
+import uuid
+
+docstore = InMemoryByteStore()
+id_key = "doc_id"
+
+class CustomMultiVectorRetriever(MultiVectorRetriever):
+    def _get_relevant_documents(
+        self, query: str, *, run_manager: CallbackManagerForRetrieverRun
+    ) -> List[Document]:
+        results = self.vectorstore.similarity_search_with_relevance_scores(
+            query, k=2, **self.search_kwargs
+        )
+
+        id_to_doc = defaultdict(list)
+        for doc, score in results:
+            doc_id = doc.metadata.get("doc_id")
+            if doc_id:
+                doc.metadata["score"] = score
+                id_to_doc[doc_id].append(doc)
+
+        docs = []
+        for _id, sub_docs in id_to_doc.items():
+            docstore_docs = self.docstore.mget([_id])
+            if docstore_docs:
+                if doc := docstore_docs[0]:
+                    doc.metadata["sub_docs"] = sub_docs
+                    docs.append(doc)
+
+        return docs
 
 @dataclass
 class DocumentProcessingConfig:
@@ -64,7 +99,7 @@ class DocumentProcessor:
                     try:
                         doc_splits = text_splitter.split_documents([doc])
                         filtered_splits = [
-                            split for split in doc_splits 
+                            split for split in doc_splits
                             if DocumentProcessingConfig.min_chunk_size <= len(split.page_content) <= DocumentProcessingConfig.max_chunk_size
                         ]
                         splits.extend(filtered_splits)
@@ -101,13 +136,35 @@ class VectorStoreManager:
                 )
                 vectorstore.merge_from(batch_vectorstore)
         return vectorstore
-
+    
     @staticmethod
     def create_retriever(vectorstore: FAISS, k: int = 5) -> Any:
         """Create a retriever from the vector store."""
         return vectorstore.as_retriever(
             search_kwargs={"k": k, "return_scores": True}
         )
+    
+    def create_retriever_similarity_score(vectorestore: FAISS, k: 10, splits) -> Any:
+        doc_ids = [str(uuid.uuid4()) for _ in splits]
+        child_text_splitter = RecursiveCharacterTextSplitter(chunk_size=400)
+
+        sub_docs = []
+        for i, doc in enumerate(splits):
+            _id = doc_ids[i]
+            _sub_docs = child_text_splitter.split_documents([doc])
+            for _doc in _sub_docs:
+                _doc.metadata[id_key] = _id
+            sub_docs.extend(_sub_docs)
+        
+        vectordb = FAISS.from_documents(sub_docs, config.embedding_model_3)
+        retriever = CustomMultiVectorRetriever(
+            vectorstore=vectordb,
+            docstore=docstore,
+            id_key=id_key
+        )
+
+        retriever.docstore.mset(list(zip(doc_ids, splits)))
+        return retriever
 
 class mainChain:
     """Factory class for creating various LLM chains."""
@@ -174,7 +231,7 @@ class Initializer:
     
     def __init__(self, folder_path: str):
         self.embedding_model = config.embedding_model_3
-        self.llm_model = config.llm_configs['model_1'].model
+        self.llm_model = config.llm_configs['model_2'].model
         self.folder_path = Path(folder_path)
         self.doc_config = DocumentProcessingConfig()
         self.doc_processor = DocumentProcessor(self.folder_path, self.doc_config)
@@ -212,7 +269,8 @@ class Initializer:
                 self.doc_config.vector_batch_size
             )
             
-            retriever = self.vector_manager.create_retriever(vectorstore)
+            # retriever = self.vector_manager.create_retriever(vectorstore)
+            retriever = self.vector_manager.create_retriever_similarity_score(vectorstore, splits)
             print("Database initialization completed successfully.")
             
             return retriever
