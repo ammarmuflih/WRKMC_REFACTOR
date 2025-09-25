@@ -53,14 +53,14 @@ def precheck():
 def create_app():
     app = Flask(__name__)
 
-    CORS(app, resources={
-        r"/*": {
-            "origins": ["https://kedungputri.wrkmc-ugm.id", "https://sapon.wrkmc-ugm.id", "https://api.wrkmc-ugm.id"],
-            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"],
-            "supports_credentials": True
-        }
-    })
+    # CORS(app, resources={
+    #     r"/*": {
+    #         "origins": ["https://kedungputri.wrkmc-ugm.id", "https://sapon.wrkmc-ugm.id", "https://api.wrkmc-ugm.id"],
+    #         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    #         "allow_headers": ["Content-Type", "Authorization"],
+    #         "supports_credentials": True
+    #     }
+    # })
 
     initializer_store = InitializerStore()
     for loc in config.location_config():
